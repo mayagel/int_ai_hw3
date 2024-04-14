@@ -9,20 +9,16 @@ actions_dict = {
     'LEFT': 3
     }
 
-#this function iterates over all the possible actions and calculates the value of the state
 def calc_action(mdp, U, x, y, action):
-    res = 0
-    for a in mdp.actions:
-        (new_x, new_y) = mdp.step((x, y), a)
-        res += (mdp.transition_function[action])[actions_dict[a]] * U[new_x][new_y]
-    return res
+    # res = 0
+    # for a in mdp.actions:
+    #     (new_x, new_y) = mdp.step((x, y), a)
+    #     res += (mdp.transition_function[action])[actions_dict[a]] * U[new_x][new_y]
+    # return res
+    return sum([(mdp.transition_function[action])[actions_dict[a]] * U[mdp.step((x, y), a)[0]][mdp.step((x, y), a)[1]] for a in mdp.actions])
 
-#this function finds the best action for a given state
 def max_u(mdp, U, x, y):
-    max_val = float('-inf')
-    for action in mdp.actions:
-        max_val = max(round(calc_action(mdp, U, x, y, action), 2), round(max_val, 2))
-        # max_val = max(max_val, val = calc_action(mdp, U, x, y, action))
+    max_val = max([round(calc_action(mdp, U, x, y, action), 2) for action in mdp.actions])
     return float(mdp.board[x][y] + (max_val * mdp.gamma))
 
 
