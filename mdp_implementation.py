@@ -1,18 +1,48 @@
 from copy import deepcopy
 import numpy as np
+import mdp
+
+actions_dict = {
+    'UP': 0,
+    'DOWN': 1,
+    'RIGHT': 2,
+    'LEFT': 3
+    }
+
+#this function iterates over all the possible actions and calculates the value of the state
+def calc_action(mdp, U, x, y, action):
+    res = 0
+    for a in mdp.actions:
+        (new_x, new_y) = mdp.step((x, y), a)
+        res += (mdp.transition_function[action])[actions_dict[a]] * U[new_x][new_y]
+    return res
+
+#this function finds the best action for a given state
+def max_u(mdp, U, x, y):
+    max_val = float('-inf')
+    for action in mdp.actions:
+        max_val = max(round(calc_action(mdp, U, x, y, action), 2), round(max_val, 2))
+        # max_val = max(max_val, val = calc_action(mdp, U, x, y, action))
+    return float(mdp.board[x][y] + (max_val * mdp.gamma))
 
 
 def value_iteration(mdp, U_init, epsilon=10 ** (-3)):
-    # TODO:
-    # Given the mdp, the initial utility of each state - U_init,
-    #   and the upper limit - epsilon.
-    # run the value iteration algorithm and
-    # return: the U obtained at the end of the algorithms' run.
-    #
-
-    # ====== YOUR CODE: ======
-    raise NotImplementedError
-    # ========================
+    U_res = None
+    U_org = deepcopy(U_init)
+    for x, y in mdp.terminal_states:
+        U_org[x][y] = float(mdp.board[x][y])
+    delta = float('inf')
+    coordinates = [(x, y) for x in range(mdp.num_row) for y in range(mdp.num_col)]
+    while delta > epsilon * (1 - mdp.gamma) / mdp.gamma:
+        U_res = deepcopy(U_org)
+        delta = 0
+        for x, y in coordinates:
+            if mdp.board[x][y] in mdp.terminal_states or mdp.board[x][y] == 'WALL':
+                continue
+            U_org[x][y] = max_u(mdp, U_org, x, y)
+            delta = max(delta, abs(U_res[x][y] - U_org[x][y]))
+    U_res = deepcopy(U_org)
+    return U_res
 
 
 def get_policy(mdp, U):
@@ -50,7 +80,7 @@ def policy_iteration(mdp, policy_init):
 
 
 
-"""For this functions, you can import what ever you want """
+""" For these functions, you can import what ever you want """
 
 
 def get_all_policies(mdp, U, epsilon=10 ** (-3)):  # You can add more input parameters as needed
