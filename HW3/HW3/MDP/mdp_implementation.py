@@ -13,18 +13,18 @@ actions_dict = {
 ROWS = 3
 COLUMNS = 4
 
-
+#calc_action
 def iterate_over_action(mdp: m.MDP, U_bar, r, c, action):
     val = 0
     # this loop is to sum up the probabilities that we do another action instead
     for prob_action in mdp.actions:
         next_state = mdp.step((r, c), prob_action)
-        t = mdp.transition_function[action][actions_dict[prob_action]]
-        b = U_bar[next_state[0]][next_state[1]]
+        # t = mdp.transition_function[action][actions_dict[prob_action]]
+        # b = U_bar[next_state[0]][next_state[1]]
         val += mdp.transition_function[action][actions_dict[prob_action]] * U_bar[next_state[0]][next_state[1]]
     return val
 
-
+#max_action
 def find_best_action_for_state(mdp: m.MDP, U, r, c):
     global actions_dict
     max_val = -np.inf
@@ -147,7 +147,7 @@ def policy_evaluation(mdp, policy):
             for action in mdp.actions:
                 next_state = mdp.step((r, c), action)
                 next_state_pos = next_state[0] * mdp.num_col + next_state[1]
-                wanted_action = map_actions[policy[r][c]]
+                # wanted_action = map_actions[policy[r][c]]
                 cur_action = map_actions[action]
                 policy_mat[state][next_state_pos] += mdp.transition_function[policy[r][c]][cur_action]
 
