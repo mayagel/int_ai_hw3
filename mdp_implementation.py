@@ -1,6 +1,7 @@
 from copy import deepcopy
 import numpy as np
 import mdp
+from termcolor import colored
 
 actions_dict = {
     'UP': 0,
@@ -9,6 +10,13 @@ actions_dict = {
     'LEFT': 3
     }
 
+directions_dict = {'UP': u'\u2191',
+                  'DOWN': u'\u2193',
+                  'RIGHT': u'\u2192',
+                  'LEFT': u'\u2190'
+                  }
+
+
 def get_coordinates(mdp):
     return [(x, y) for x in range(mdp.num_row) for y in range(mdp.num_col)
             if (x,y) not in mdp.terminal_states and mdp.board[x][y] != 'WALL']
@@ -16,17 +24,14 @@ def get_coordinates(mdp):
 def calc_action(mdp, U, x, y, action):
     return sum([mdp.transition_function[action][actions_dict[a]] * U[mdp.step((x, y), a)[0]][mdp.step((x, y), a)[1]]
                 for a in mdp.actions])
-    # return sum(mdp.actions, key=lambda a: mdp.transition_function[action][actions_dict[a]] *
-    #            U[mdp.step((x, y), a)[0]][mdp.step((x, y), a)[1]])
 
 def max_action(mdp, U, x, y):
-    actions_val = {}
-    for a in mdp.actions:
-        actions_val[a] = calc_action(mdp, U, x, y, a)
+    actions_val = {a: calc_action(mdp, U, x, y, a) for a in mdp.actions}
+    # actions_val = {}
+    # for a in mdp.actions:
+    #     actions_val[a] = calc_action(mdp, U, x, y, a)
     max_a = max(actions_val, key=actions_val.get)
     return (max_a, actions_val[max_a])
-    # return max([calc_action(mdp, U, x, y, a) for a in mdp.actions])
-    # return max(mdp.actions, key=lambda a: calc_action(mdp, U, x, y, a))
 
 def max_u(mdp, U, x, y):
     # max_val = max([round(calc_action(mdp, U, x, y, a), 2) for a in mdp.actions])
@@ -92,29 +97,79 @@ def policy_iteration(mdp, policy_init):
 
 
 """ For these functions, you can import what ever you want """
+import math
 
+def calc_policies(mdp, U, epsilon):
+    accuracy = len(str(epsilon)[str(epsilon).find(".") + 1:]) + 1
+    policies = np.full((mdp.num_row, mdp.num_col), None, dtype=object)
+    policies_counter = 1
+    for x, y in get_coordinates(mdp):
+        policies[x][y] = [a for a in mdp.actions.keys() 
+                          if round(calc_action(mdp, x, y, U, a), accuracy) - round(max_action(mdp, x, y, U)[1], accuracy) < epsilon]
+        policies_counter *= len(policies[x][y])
+    return (policies, policies_counter)
 
-def get_all_policies(mdp, U, epsilon=10 ** (-3)):  # You can add more input parameters as needed
-    # TODO:
-    # Given the mdp, and the utility value U (which satisfies the Belman equation)
-    # print / display all the policies that maintain this value
-    # (a visualization must be performed to display all the policies)
-    #
-    # return: the number of different policies
-    #
+def print_policies(mdp, policy):
+    res = ""
+    for x in range(mdp.num_row):
+        res += "|"
+        for y in range(mdp.num_col):
+            if (x, y) in mdp.terminal_states:
+                res += " " + colored(mdp.board[x][y][:5].ljust(5), 'red') + " |"
+            elif mdp.board[x][y] == 'WALL':
+                res += " " + colored(mdp.board[x][y][:5].ljust(5), 'blue') + " |"
+            else:
+                val = ""
+                for a in policy[x][y]:
+                    val += directions_dict[a]
+                res += " " + val[:5].ljust(5) + " |"
+        res += "\n"
+    print(res)
 
-    # ====== YOUR CODE: ======
-    raise NotImplementedError
-    # ========================
+def get_all_policies(mdp, U, epsilon=10 ** (-3), ret_policies=False, print_policies_num=False):  # You can add more input parameters as needed
+    policies, policies_num = calc_policies(mdp, U, epsilon)
+    if ret_policies:
+        return policies
+    print_policies(mdp, policies)
+    if print_policies_num:
+        print(f'\n Number of policies: {policies_num}')
+    return policies_num
 
+def equal_policies(p1, p2):
+    if len(p1) != len(p2) or len(p1[0]) != len(p2[0]):
+        return False
+    for x, y in [(i, j) for i in range(len(p1)) for j in range(len(p1[0]))]:
+        if p1[x][y] != p2[x][y]:
+            return False
+    return True
 
 def get_policy_for_different_rewards(mdp, epsilon=10 ** (-3)):  # You can add more input parameters as needed
-    # TODO:
-    # Given the mdp
-    # print / displas the optimal policy as a function of r
-    # (reward values for any non-finite state)
-    #
+    policies_arr = []
+    board = deepcopy(mdp.board)
+    rewards = [math.ceil(r * 100) / 100 for r in np.arange(-5, 5.01, 0.01)]
 
-    # ====== YOUR CODE: ======
-    raise NotImplementedError
-    # ========================
+    for r in rewards:
+        for x, y in get_coordinates(mdp):
+            mdp.board[x][y] = r
+        U = value_iteration(mdp, [[0 for _ in range(mdp.num_col)] for _ in range(mdp.num_row)])
+        policies = get_all_policies(mdp, U, epsilon, True)
+        if not policies_arr:
+            policies_arr.append([policies, r, None])
+        elif not equal_policies(policies_arr[-1][0], policies):
+            policies_arr[-1][2] = r
+            policies_arr.append([policies, r, None])
+        mdp.board = board
+    policies_arr[-1][2] = 5
+
+    for policy in policies_arr:
+        print_policies(mdp, policy[0])
+        if policy[1] == -5.0:
+            print(f'R(s) < {policy[2]} \n \n')
+        elif policy[2] == 5.0:
+            print(f'R(s) >= {policy[1]} \n \n')
+        else:
+            print(f'{policy[1]} <= R(s) < {policy[2]} \n \n')
+
+    rewards_res = [p[2] for p in policies_arr].pop(-1)
+    print(f'Rewards at which policy changed:\n{rewards_res}')
+    return rewards_res
