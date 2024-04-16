@@ -22,8 +22,7 @@ def get_coordinates(mdp):
             if (x,y) not in mdp.terminal_states and mdp.board[x][y] != 'WALL']
 
 def calc_action(mdp, U, x, y, action):
-    return sum([mdp.transition_function[action][actions_dict[a]] * U[mdp.step((x, y), a)[0]][mdp.step((x, y), a)[1]]
-                for a in mdp.actions])
+    return sum([mdp.transition_function[action][actions_dict[a]] * U[mdp.step((x, y), a)[0]][mdp.step((x, y), a)[1]] for a in mdp.actions])
 
 def max_action(mdp, U, x, y):
     actions_val = {a: calc_action(mdp, U, x, y, a) for a in mdp.actions}
@@ -105,7 +104,7 @@ def calc_policies(mdp, U, epsilon):
     policies_counter = 1
     for x, y in get_coordinates(mdp):
         policies[x][y] = [a for a in mdp.actions.keys() 
-                          if round(calc_action(mdp, x, y, U, a), accuracy) - round(max_action(mdp, x, y, U)[1], accuracy) < epsilon]
+                          if round(calc_action(mdp, U, x, y, a), accuracy) - round(max_action(mdp, U, x, y)[1], accuracy) < epsilon]
         policies_counter *= len(policies[x][y])
     return (policies, policies_counter)
 
