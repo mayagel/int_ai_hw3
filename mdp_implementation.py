@@ -18,8 +18,11 @@ directions_dict = {'UP': u'\u2191',
 
 
 def get_coordinates(mdp):
-    return [(x, y) for x in range(mdp.num_row) for y in range(mdp.num_col)
-            if (x,y) not in mdp.terminal_states and mdp.board[x][y] != 'WALL']
+    # coordinates = [(x, y) for x in range(mdp.num_row) for y in range(mdp.num_col)
+    #         if (x,y) not in mdp.terminal_states and mdp.board[x][y] != 'WALL']
+    wall_coordinates = [(x, y) for x in range(mdp.num_row) for y in range(mdp.num_col) if mdp.board[x][y] == 'WALL']
+    coordinates = [(x, y) for x in range(mdp.num_row) for y in range(mdp.num_col) if (x, y) not in mdp.terminal_states and (x, y) not in wall_coordinates]
+    return coordinates, wall_coordinates
 
 def calc_action(mdp, U, x, y, action):
     return sum([mdp.transition_function[action][actions_dict[a]] * U[mdp.step((x, y), a)[0]][mdp.step((x, y), a)[1]] for a in mdp.actions])
@@ -42,11 +45,13 @@ def max_u(mdp, U, x, y):
 def value_iteration(mdp, U_init, epsilon=10 ** (-3)):
     U_res = None
     U_org = deepcopy(U_init)
+    coordinates, wall_coordinates = get_coordinates(mdp)
+    for x, y in wall_coordinates:
+        U_org[x][y] = None
     for x, y in mdp.terminal_states:
         U_org[x][y] = float(mdp.board[x][y])
     delta = float('inf')
-    coordinates = get_coordinates(mdp)
-    while delta > epsilon * (1 - mdp.gamma) / mdp.gamma:
+    while delta > (epsilon * (1 - mdp.gamma)) / mdp.gamma:
         U_res = deepcopy(U_org)
         delta = 0
         for x, y in coordinates:
@@ -58,14 +63,14 @@ def value_iteration(mdp, U_init, epsilon=10 ** (-3)):
 
 def get_policy(mdp, U):
     policy = [[""] * mdp.num_col for _ in range(mdp.num_row)]
-    coordinates = get_coordinates(mdp)
+    coordinates = get_coordinates(mdp)[0]
     for x, y in coordinates:
         policy[x][y] = max(mdp.actions, key=lambda a: calc_action(mdp, U, x, y, a))
     return policy
 
 
 def policy_evaluation(mdp, policy):
-    coordinates = get_coordinates(mdp)
+    coordinates = get_coordinates(mdp)[0]
     I = np.eye(mdp.num_row * mdp.num_col)
     policy_mat = np.zeros((mdp.num_row * mdp.num_col, mdp.num_row * mdp.num_col))
     reward = np.zeros(mdp.num_row * mdp.num_col)
@@ -81,7 +86,7 @@ def policy_evaluation(mdp, policy):
 
 
 def policy_iteration(mdp, policy_init):
-    coordinates = get_coordinates(mdp)
+    coordinates = get_coordinates(mdp)[0]
     modified = True
     while modified:
         U = policy_evaluation(mdp, policy_init)
@@ -102,7 +107,7 @@ def calc_policies(mdp, U, epsilon):
     accuracy = len(str(epsilon)[str(epsilon).find(".") + 1:]) + 1
     policies = np.full((mdp.num_row, mdp.num_col), None, dtype=object)
     policies_counter = 1
-    for x, y in get_coordinates(mdp):
+    for x, y in get_coordinates(mdp)[0]:
         policies[x][y] = [a for a in mdp.actions.keys() 
                           if round(calc_action(mdp, U, x, y, a), accuracy) - round(max_action(mdp, U, x, y)[1], accuracy) < epsilon]
         policies_counter *= len(policies[x][y])
@@ -148,7 +153,7 @@ def get_policy_for_different_rewards(mdp, epsilon=10 ** (-3)):  # You can add mo
     rewards = [math.ceil(r * 100) / 100 for r in np.arange(-5, 5.01, 0.01)]
 
     for r in rewards:
-        for x, y in get_coordinates(mdp):
+        for x, y in get_coordinates(mdp)[0]:
             mdp.board[x][y] = r
         U = value_iteration(mdp, [[0 for _ in range(mdp.num_col)] for _ in range(mdp.num_row)])
         policies = get_all_policies(mdp, U, epsilon, True)
