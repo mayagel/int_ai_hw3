@@ -41,7 +41,6 @@ def max_u(mdp, U, x, y):
     max_val = round(max_action(mdp, U, x, y)[1], 2)
     return float(float(mdp.board[x][y]) + (max_val * mdp.gamma))
 
-
 def value_iteration(mdp, U_init, epsilon=10 ** (-3)):
     U_res = None
     U_org = deepcopy(U_init)
@@ -108,8 +107,8 @@ def calc_policies(mdp, U, epsilon):
     policies = np.full((mdp.num_row, mdp.num_col), None, dtype=object)
     policies_counter = 1
     for x, y in get_coordinates(mdp)[0]:
-        policies[x][y] = [a for a in mdp.actions.keys() 
-                          if round(calc_action(mdp, U, x, y, a), accuracy) - round(max_action(mdp, U, x, y)[1], accuracy) < epsilon]
+        max_action_val = max_action(mdp, U, x, y)[1]
+        policies[x][y] = [a for a, val in {a: calc_action(mdp, U, x, y, a) for a in mdp.actions}.items() if abs(val - max_action_val) < epsilon]
         policies_counter *= len(policies[x][y])
     return (policies, policies_counter)
 
@@ -130,7 +129,18 @@ def print_policies(mdp, policy):
         res += "\n"
     print(res)
 
-def get_all_policies(mdp, U, epsilon=10 ** (-3), ret_policies=False, print_policies_num=False):  # You can add more input parameters as needed
+
+def get_all_policies2(mdp, U, epsilon=10 ** (-3), ret_policies=False, print_policies_num=False):  # You can add more input parameters as needed
+    policies, policies_num = calc_policies(mdp, U, epsilon)
+    if ret_policies:
+        return policies
+    print_policies(mdp, policies)
+    if print_policies_num:
+        print(f'\n Number of policies: {policies_num}')
+    return policies_num
+
+def get_all_policies(mdp, U, epsilon=10 ** (-3), ret_policies=False, print_policies_num=True):  # You can add more input parameters as needed
+    print("IN GET ALL POLICIES")
     policies, policies_num = calc_policies(mdp, U, epsilon)
     if ret_policies:
         return policies
@@ -156,7 +166,7 @@ def get_policy_for_different_rewards(mdp, epsilon=10 ** (-3)):  # You can add mo
         for x, y in get_coordinates(mdp)[0]:
             mdp.board[x][y] = r
         U = value_iteration(mdp, [[0 for _ in range(mdp.num_col)] for _ in range(mdp.num_row)])
-        policies = get_all_policies(mdp, U, epsilon, True)
+        policies = get_all_policies2(mdp, U, epsilon, True)
         if not policies_arr:
             policies_arr.append([policies, r, None])
         elif not equal_policies(policies_arr[-1][0], policies):
@@ -177,3 +187,31 @@ def get_policy_for_different_rewards(mdp, epsilon=10 ** (-3)):  # You can add mo
     rewards_res = [p[2] for p in policies_arr].pop(-1)
     print(f'Rewards at which policy changed:\n{rewards_res}')
     return rewards_res
+
+
+def get_policy_for_different_rewards2(mdp, epsilon=10 ** (-3)):
+    """
+    Given the MDP, this function prints the optimal policy for different reward values (R),
+    where R is between -5 to 5 with a gap of 0.1 between each value.
+
+    :param mdp: The MDP agent
+    :param epsilon: The epsilon value for the MDP
+    """
+    original_board = mdp.board.copy()  # Make a copy of the original board to restore later
+    for r in np.arange(-5, 5.1, 0.1):  # Iterate from -5 to 5 with a gap of 0.1
+        print(f'\nR = {r:.1f}')
+        # Update the board with the new reward value
+        for i in range(mdp.num_row):
+            for j in range(mdp.num_col):
+                if (i, j) not in mdp.terminal_states and mdp.board[i][j] != 'WALL':
+                    mdp.board[i][j] = str(r)
+        
+        # Compute the optimal policy using value iteration and get_policy
+        U = value_iteration(mdp, [[0 for _ in range(mdp.num_col)] for _ in range(mdp.num_row)], epsilon)
+        optimal_policy = get_policy(mdp, U)
+        
+        # Print the optimal policy
+        mdp.print_policy(optimal_policy)
+        
+        # Restore the original board for the next iteration
+        mdp.board = original_board.copy()

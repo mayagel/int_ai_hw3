@@ -1,8 +1,7 @@
 import argparse
 import os
 from mdp import MDP
-from mdp_implementation import value_iteration, get_policy, policy_evaluation, policy_iteration, get_all_policies, get_policy_for_different_rewards
-# import mdp_implementation_ref
+from mdp_implementation import value_iteration, get_policy, policy_evaluation, policy_iteration, get_all_policies, get_policy_for_different_rewards, get_policy_for_different_rewards2
 
 def is_valid_file(parser, arg):
     if not os.path.exists(arg):
@@ -99,6 +98,7 @@ def example_driver():
         [0.692, 0, 0.564, -1.0],
         [0.623, 0.566, 0.518, 0.252]]
     get_all_policies(mdp, U)
+    get_policy_for_different_rewards2(mdp)
 
 
 if __name__ == '__main__':
